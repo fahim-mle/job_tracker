@@ -60,27 +60,11 @@ This document outlines the step-by-step implementation plan for the Job Tracker 
 - [ ] Configure daily job (e.g., 08:00 AM) to run the scraper.
 - [ ] Write `scripts/run_scraper.py` entry point.
 
-## **Phase 3: AI Integration (Week 2-3)**
-
-**Goal:** Integrate Local LLM for intelligent skill extraction.
-
-### **Step 3.1: LLM Setup**
-
-- [ ] Install and configure `ollama` python client.
-- [ ] Create `src/ai/llm_client.py` wrapper.
-- [ ] Pull suitable model (e.g., `llama3` or `mistral`).
-
-### **Step 3.2: Skill Extraction**
-
-- [ ] Implement `SkillExtractor` class.
-- [ ] Design prompt for extracting skills, experience level, and salary from job descriptions.
-- [ ] Update `JobService` to process new jobs through `SkillExtractor` automatically.
-
-## **Phase 4: Dashboard & Application Tracking (Week 3)**
+## **Phase 3: Dashboard & Application Tracking (Week 2-3)**
 
 **Goal:** User interface for viewing jobs and managing applications.
 
-### **Step 4.1: Streamlit Dashboard**
+### **Step 3.1: Streamlit Dashboard**
 
 - [ ] Set up `src/dashboard/app.py`.
 - [ ] Create "Jobs" tab:
@@ -90,27 +74,30 @@ This document outlines the step-by-step implementation plan for the Job Tracker 
   - Kanban board or list view of application statuses.
   - Form to update status/notes.
 
-### **Step 4.2: Application Management**
+### **Step 3.2: Application Management**
 
 - [ ] Implement backend logic for moving applications between states (Applied -> Interview -> Offer).
 - [ ] Add analytics widgets (Applications per week, Response rate).
 
-## **Phase 5: Learning System & Polish (Week 4)**
+## **Phase 4: AI Integration (Week 3-4)**
 
-**Goal:** Gap analysis and learning recommendations.
+**Goal:** Integrate Local LLM for intelligent skill extraction.
 
-### **Step 5.1: Skill Gap Analysis**
+### **Step 4.1: LLM Setup**
+
+- [ ] Install and configure `ollama` python client.
+- [ ] Create `src/ai/llm_client.py` wrapper.
+- [ ] Pull suitable model (e.g., `llama3` or `mistral`).
+
+### **Step 4.2: Skill Extraction**
+
+- [ ] Implement `SkillExtractor` class.
+- [ ] Design prompt for extracting skills, experience level, and salary from job descriptions.
+- [ ] Update `JobService` to process new jobs through `SkillExtractor` automatically.
+
+### **Step 4.3: Learning System**
 
 - [ ] Create logic to compare "User Skills" vs "Job Required Skills".
 - [ ] Visualize skill gaps in the dashboard.
-
-### **Step 5.2: Learning Paths**
-
 - [ ] Implement `LearningPathGenerator` using LLM.
 - [ ] Suggest resources for missing high-frequency skills.
-
-### **Step 5.3: Documentation & Deployment**
-
-- [ ] Write `README.md` with setup instructions.
-- [ ] Create `Dockerfile` (optional, for containerization).
-- [ ] Finalize `requirements.txt`.
