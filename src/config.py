@@ -8,9 +8,18 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
 
+    ollama_model: str = Field(
+        default="llama3",
+        validation_alias="OLLAMA_MODEL",
+    )
+
     @property
     def DATABASE_URL(self) -> str:
         return self.database_url
+
+    @property
+    def OLLAMA_MODEL(self) -> str:
+        return self.ollama_model
 
     model_config = SettingsConfigDict(
         env_file=".env",

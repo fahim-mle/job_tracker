@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.orm import Session
 
 from src.database.models import Job
+
+if TYPE_CHECKING:
+    from src.services.skill_service import SkillService
 
 
 class JobService:
@@ -54,3 +57,21 @@ class JobService:
             .limit(limit)
             .all()
         )
+
+    def process_new_jobs_with_ai(
+        self, skill_service: SkillService, limit: int = 100
+    ) -> int:
+        jobs = (
+            self.db_session.query(Job)
+            .filter(~Job.job_skills.any())
+            .order_by(Job.scraped_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+        processed = 0
+        for job in jobs:
+            skill_service.extract_and_save_skills(job.id)
+            processed += 1
+
+        return processed
