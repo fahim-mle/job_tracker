@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from src.database.models import Job
 
@@ -52,6 +52,7 @@ class JobService:
     def get_active_jobs(self, limit: int = 100) -> list[Job]:
         return (
             self.db_session.query(Job)
+            .options(joinedload(Job.skills))
             .filter(Job.status == "active")
             .order_by(Job.scraped_at.desc())
             .limit(limit)

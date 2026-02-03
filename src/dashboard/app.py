@@ -1,8 +1,9 @@
 from typing import Iterable
 
 import streamlit as st
+from sqlalchemy import func
 
-from src.database.models import Application, Job
+from src.database.models import Application, Job, JobSkill, Skill
 from src.database.session import SessionLocal
 from src.services.application_service import ApplicationService
 from src.services.job_service import JobService
@@ -73,12 +74,17 @@ def render_jobs_page() -> None:
     rows = []
     for job in filtered_jobs:
         posted_date = getattr(job, "posted_date", None)
+        skills = getattr(job, "skills", None) or []
+        skill_names = sorted(
+            {skill.skill_name for skill in skills if getattr(skill, "skill_name", None)}
+        )
         rows.append(
             {
                 "Track": False,
                 "Company": getattr(job, "company", "") or "",
                 "Title": getattr(job, "title", "") or "",
                 "Location": getattr(job, "location", "") or "N/A",
+                "Skills": ", ".join(skill_names) if skill_names else "N/A",
                 "Posted Date": posted_date.isoformat() if posted_date else "N/A",
                 "Link": getattr(job, "url", "") or "",
             }
@@ -92,7 +98,7 @@ def render_jobs_page() -> None:
             "Track": st.column_config.CheckboxColumn("Track"),
             "Link": st.column_config.LinkColumn("Link"),
         },
-        disabled=["Company", "Title", "Location", "Posted Date", "Link"],
+        disabled=["Company", "Title", "Location", "Skills", "Posted Date", "Link"],
     )
 
     selected_count = len([row for row in edited_rows if row.get("Track")])
@@ -240,7 +246,27 @@ def render_applications_page() -> None:
 
 def render_stats_page() -> None:
     st.header("Stats")
-    st.write("Stats page placeholder.")
+
+    with SessionLocal() as db_session:
+        top_skills = (
+            db_session.query(
+                Skill.skill_name,
+                func.count(JobSkill.skill_id).label("job_count"),
+            )
+            .join(JobSkill, JobSkill.skill_id == Skill.id)
+            .group_by(Skill.id)
+            .order_by(func.count(JobSkill.skill_id).desc(), Skill.skill_name.asc())
+            .limit(10)
+            .all()
+        )
+
+    if not top_skills:
+        st.info("No skills data available yet.")
+        return
+
+    st.subheader("Top Requested Skills")
+    skill_counts = {skill_name: count for skill_name, count in top_skills}
+    st.bar_chart(skill_counts)
 
 
 def main() -> None:
