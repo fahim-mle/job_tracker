@@ -12,10 +12,12 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from src.automation.scheduler import JobScheduler
+from src.ai.llm_client import LLMClient
 from src.database.session import SessionLocal
 from src.logger import get_logger
 from src.scrapers.linkedin import LinkedInScraper
 from src.services.job_service import JobService
+from src.services.skill_service import SkillService
 
 
 def _parse_args() -> argparse.Namespace:
@@ -70,6 +72,11 @@ async def main() -> None:
                     len(results),
                     result.get("title"),
                 )
+            llm_client = LLMClient()
+            skill_service = SkillService(db_session, llm_client)
+            logger.info("Starting AI processing for new jobs")
+            processed = job_service.process_new_jobs_with_ai(skill_service)
+            logger.info("AI processing complete: %s jobs processed", processed)
             db_session.commit()
             logger.info("LinkedIn scraping run complete")
         except Exception:
