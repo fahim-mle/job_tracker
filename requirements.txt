@@ -1,0 +1,10 @@
+sqlalchemy
+alembic
+pydantic
+pydantic-settings
+python-dotenv
+pytest
+ruff
+playwright
+beautifulsoup4
+requests

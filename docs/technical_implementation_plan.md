@@ -3,6 +3,7 @@
 ## **Technical Stack & Architecture**
 
 ### **Core Technologies**
+
 - **Backend**: Python 3.11+ (async/await support)
 - **Web Scraping**: Playwright (modern JS-heavy sites) + requests + BeautifulSoup (fallback)
 - **Database**: SQLite with SQLAlchemy ORM
@@ -11,6 +12,7 @@
 - **Frontend**: Streamlit (rapid prototyping) → FastAPI + React (production)
 
 ### **Development Workflow**
+
 ```
 project/
 ├── src/
@@ -28,6 +30,7 @@ project/
 ## **Phase 1: Core Infrastructure (Week 1)**
 
 ### **Database Schema Design**
+
 ```sql
 -- jobs table
 CREATE TABLE jobs (
@@ -73,6 +76,7 @@ CREATE TABLE job_skills (
 ```
 
 ### **Scraper Architecture**
+
 ```python
 # Base scraper class
 class BaseScraper:
@@ -80,7 +84,7 @@ class BaseScraper:
         self.session = requests.Session()
         self.playwright = None
         self.rate_limiter = AsyncRateLimiter()
-    
+
     async def scrape(self, search_params):
         # Platform-specific implementation
         pass
@@ -96,6 +100,7 @@ class LinkedInScraper(BaseScraper):
 ```
 
 ### **Environment Setup**
+
 ```bash
 # Python environment
 python -m venv venv
@@ -114,6 +119,7 @@ pip install pytest black ruff pre-commit
 ## **Phase 2: Scraping Implementation (Week 1-2)**
 
 ### **LinkedIn Scraper Strategy**
+
 1. **Respectful Approach**:
    - 3-5 second delays between requests
    - User-agent rotation
@@ -132,17 +138,18 @@ pip install pytest black ruff pre-commit
    - Proxy rotation (future enhancement)
 
 ### **Daily Automation Setup**
+
 ```python
 # cron job: 0 8 * * * /path/to/venv/bin/python /path/to/scripts/daily_scrape.py
 
 class DailyScraper:
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
-    
+
     async def run_daily_scrape(self):
         # Target companies from config
         scrapers = [LinkedInScraper(), CompanyScraper()]
-        
+
         for scraper in scrapers:
             await scraper.scrape_target_companies()
             await self.rate_limiter.wait()
@@ -151,20 +158,21 @@ class DailyScraper:
 ## **Phase 3: AI Integration (Week 2-3)**
 
 ### **Local LLM Setup**
+
 ```python
 # Ollama integration
 class SkillExtractor:
     def __init__(self):
         self.client = Client(host='http://localhost:11434')
-    
+
     async def extract_skills(self, job_description):
         prompt = f"""
         Extract technical skills from this job description:
         {job_description}
-        
+
         Return JSON format: {{"skills": ["skill1", "skill2"], "confidence": 0.8}}
         """
-        
+
         response = await self.client.chat(
             model='llama3.2',
             messages=[{"role": "user", "content": prompt}]
@@ -173,6 +181,7 @@ class SkillExtractor:
 ```
 
 ### **Skill Analysis Pipeline**
+
 1. **Extraction**: Local LLM processes job descriptions
 2. **Normalization**: Standardize skill names (e.g., "JS" → "JavaScript")
 3. **Frequency Analysis**: Track demand trends
@@ -181,19 +190,20 @@ class SkillExtractor:
 ## **Phase 4: Application Tracking (Week 3)**
 
 ### **Streamlit Dashboard**
+
 ```python
 # main dashboard features
 def main():
     st.title("Job Tracker Dashboard")
-    
+
     # Tabs: Jobs, Applications, Skills, Learning
     tab1, tab2, tab3, tab4 = st.tabs(["Jobs", "Applications", "Skills", "Learning"])
-    
+
     with tab1:
         # Filterable job listings
         # AI-powered skill matching
         # Application status tracking
-    
+
     with tab3:
         # Skill frequency charts
         # Learning gap analysis
@@ -201,6 +211,7 @@ def main():
 ```
 
 ### **API Layer (Future)**
+
 ```python
 # FastAPI endpoints
 @app.get("/jobs")
@@ -215,21 +226,22 @@ async def create_application(application: ApplicationCreate):
 ## **Phase 5: Learning System (Week 4)**
 
 ### **Learning Path Generation**
+
 ```python
 class LearningPathGenerator:
     async def generate_path(self, skill_gaps):
         prompt = f"""
         Create learning path for these skills: {skill_gaps}
-        
+
         For each skill, suggest:
         1. Online courses (free/paid)
         2. Project ideas
         3. Time estimation
         4. Prerequisites
-        
+
         Return structured JSON with priorities
         """
-        
+
         response = await self.local_llm.generate(prompt)
         return self.parse_learning_path(response)
 ```
@@ -237,6 +249,7 @@ class LearningPathGenerator:
 ## **Database Migration Strategy**
 
 ### **SQLite → PostgreSQL Path**
+
 ```python
 # Migration script
 alembic revision --autogenerate -m "Add job_skills table"
@@ -246,7 +259,7 @@ alembic upgrade head
 def export_to_csv():
     jobs_df = pd.read_sql("SELECT * FROM jobs", engine)
     applications_df = pd.read_sql("SELECT * FROM applications", engine)
-    
+
     jobs_df.to_csv("jobs_backup.csv", index=False)
     applications_df.to_csv("applications_backup.csv", index=False)
 ```
@@ -254,6 +267,7 @@ def export_to_csv():
 ## **Testing & Quality Assurance**
 
 ### **Test Strategy**
+
 ```python
 # Unit tests
 class TestLinkedInScraper:
@@ -275,6 +289,7 @@ class TestSkillExtraction:
 ## **Deployment & Monitoring**
 
 ### **Local Development Setup**
+
 ```bash
 # Pre-commit hooks
 pre-commit install
@@ -288,6 +303,7 @@ python -m src.automation.daily_scrape
 ```
 
 ### **Monitoring & Logging**
+
 ```python
 # Structured logging
 import structlog
@@ -305,19 +321,21 @@ async def scrape_with_monitoring():
 ## **Risk Mitigation Enhancements**
 
 ### **Scalability Considerations**
+
 1. **Rate Limiting**: Token bucket algorithm
 2. **Caching**: Redis for frequent queries
 3. **Database**: Connection pooling, query optimization
 4. **Monitoring**: Prometheus + Grafana (future)
 
 ### **Data Quality**
+
 ```python
 # Validation layer
 class JobValidator:
     def validate(self, job_data):
         required_fields = ['title', 'company', 'description']
         return all(field in job_data for field in required_fields)
-    
+
     def sanitize(self, job_data):
         # HTML sanitization, text normalization
         job_data['description'] = bleach.clean(job_data['description'])
