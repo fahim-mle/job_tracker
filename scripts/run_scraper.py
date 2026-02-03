@@ -58,6 +58,7 @@ async def main() -> None:
                 payload = {
                     "company": company,
                     "title": title,
+                    "location": result.get("location"),
                     "posted_date": result.get("date_posted"),
                     "url": result.get("url"),
                     "source_platform": "linkedin",

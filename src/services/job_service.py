@@ -20,6 +20,7 @@ class JobService:
         allowed_fields = {
             "company",
             "title",
+            "location",
             "description",
             "skills_raw",
             "url",

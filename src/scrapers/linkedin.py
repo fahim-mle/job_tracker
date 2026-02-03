@@ -40,6 +40,10 @@ class LinkedInScraper(BaseScraper):
             finally:
                 await browser.close()
 
+        for item in results:
+            if not item.get("location"):
+                item["location"] = str(location)
+
         return [item for item in results if item["title"]]
 
     async def _handle_cookie_consent(self, page: Any) -> None:
