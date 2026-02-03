@@ -8,3 +8,4 @@ ruff
 playwright
 beautifulsoup4
 requests
+pytest-asyncio

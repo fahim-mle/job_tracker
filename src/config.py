@@ -8,6 +8,10 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
 
+    @property
+    def DATABASE_URL(self) -> str:
+        return self.database_url
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="",
