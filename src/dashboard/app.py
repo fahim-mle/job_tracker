@@ -1,5 +1,13 @@
 from typing import Iterable
 
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import streamlit as st
 from sqlalchemy import func
 
@@ -270,7 +278,7 @@ def render_stats_page() -> None:
 
 
 def main() -> None:
-    st.set_page_config(title="Job Tracker", layout="wide")
+    st.set_page_config(page_title="Job Tracker", layout="wide")
 
     page = st.sidebar.radio(
         "Navigation",
