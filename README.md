@@ -6,6 +6,7 @@ Job Tracker is a Python-based system for collecting job postings, tracking appli
 
 - Python 3.11+
 - Ollama (for AI integration)
+
   ```bash
   # Pull the recommended model
   ollama pull codellama:7b
@@ -13,26 +14,26 @@ Job Tracker is a Python-based system for collecting job postings, tracking appli
 
 ## Installation
 
-1. Create and activate a virtual environment:
+- Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
 source venv/bin/activate
 ```
 
-2. Install dependencies:
+- Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Install Playwright browser:
+- Install Playwright browser:
 
 ```bash
 playwright install chromium
 ```
 
-4. (Optional) Create a `.env` file with your database URL:
+- (Optional) Create a `.env` file with your database URL:
 
 ```bash
 DATABASE_URL=sqlite:///./job_tracker.db
@@ -56,7 +57,7 @@ streamlit run src/dashboard/app.py
 
 ## Project Structure
 
-```
+```txt
 job_tracker/
 ├── scripts/
 │   └── run_scraper.py          # Main scraper entry point

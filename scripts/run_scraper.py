@@ -31,6 +31,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--minute", type=int, default=0, help="Daily run minute.")
     parser.add_argument("--keywords", default="Python", help="Search keywords.")
     parser.add_argument("--location", default="Remote", help="Search location.")
+    parser.add_argument(
+        "--job-type",
+        "--job_type",
+        dest="job_type",
+        choices=("remote", "hybrid", "onsite"),
+        help="Filter by job type.",
+    )
     return parser.parse_args()
 
 
@@ -47,7 +54,11 @@ async def main() -> None:
         logger.info("Starting LinkedIn scraping run")
         try:
             results = await scraper.scrape(
-                {"keywords": args.keywords, "location": args.location}
+                {
+                    "keywords": args.keywords,
+                    "location": args.location,
+                    "job_type": args.job_type,
+                }
             )
             logger.info("Scraped %s job cards", len(results))
             for index, result in enumerate(results, start=1):

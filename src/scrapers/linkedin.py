@@ -13,6 +13,7 @@ class LinkedInScraper(BaseScraper):
     async def scrape(self, params: Mapping[str, Any]) -> list[dict[str, Any]]:
         keywords = params.get("keywords")
         location = params.get("location")
+        job_type = params.get("job_type")
 
         if not keywords or not location:
             raise ValueError("params must include 'keywords' and 'location'")
@@ -23,6 +24,12 @@ class LinkedInScraper(BaseScraper):
             "https://www.linkedin.com/jobs/search?"
             f"keywords={quote_plus(str(keywords))}&location={quote_plus(str(location))}"
         )
+
+        job_type_map = {"onsite": "1", "remote": "2", "hybrid": "3"}
+        if isinstance(job_type, str):
+            job_type_code = job_type_map.get(job_type.lower())
+            if job_type_code:
+                search_url = f"{search_url}&f_WT={job_type_code}"
 
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch(headless=True)
@@ -103,7 +110,7 @@ class LinkedInScraper(BaseScraper):
             return None
         return value.strip() or None
 
-    def _parse_job_date(self, date_text: str) -> date | str:
+    def _parse_job_date(self, date_text: str) -> date | None:
         cleaned = date_text.strip().lower()
         if cleaned == "just now":
             return date.today()
@@ -115,6 +122,10 @@ class LinkedInScraper(BaseScraper):
                     return date.today() - timedelta(days=amount)
                 if "hour" in tokens[1]:
                     return date.today()
+                if "month" in tokens[1]:
+                    return date.today() - timedelta(days=amount * 30)
                 if "week" in tokens[1]:
                     return date.today() - timedelta(days=amount * 7)
-        return date_text
+                if "year" in tokens[1]:
+                    return date.today() - timedelta(days=amount * 365)
+        return None
