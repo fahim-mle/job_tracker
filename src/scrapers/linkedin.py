@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import random
 from datetime import date, timedelta
 from typing import Any, Mapping
 from urllib.parse import quote_plus
@@ -44,6 +46,27 @@ class LinkedInScraper(BaseScraper):
                     self.logger.info("LinkedIn scraper: no job cards found")
                 cards = await page.query_selector_all("div.base-card")
                 results = [await self._parse_card(card) for card in cards]
+
+                # Limit for testing if provided, otherwise process all
+                limit = params.get("limit")
+                if limit and isinstance(limit, int):
+                    results = results[:limit]
+
+                for item in results:
+                    url = item.get("url")
+                    if not url:
+                        self.logger.info("LinkedIn scraper: missing job URL")
+                        item["description"] = None
+                        continue
+                    try:
+                        item["description"] = await self._scrape_job_details(page, url)
+                    except Exception:
+                        self.logger.info(
+                            "LinkedIn scraper: failed to fetch job details",
+                            extra={"url": url},
+                        )
+                        item["description"] = None
+                    await asyncio.sleep(random.uniform(2, 5))
             finally:
                 await browser.close()
 
@@ -52,6 +75,25 @@ class LinkedInScraper(BaseScraper):
                 item["location"] = str(location)
 
         return [item for item in results if item["title"]]
+
+    async def _scrape_job_details(self, page: Any, url: str) -> str | None:
+        if not url or not isinstance(url, str):
+            return None
+
+        try:
+            await page.goto(url, wait_until="domcontentloaded")
+            await self._handle_cookie_consent(page)
+            await page.wait_for_selector(".show-more-less-html__markup", timeout=10000)
+            node = await page.query_selector(".show-more-less-html__markup")
+            if not node:
+                return None
+            text = await node.text_content()
+            if not text:
+                return None
+            cleaned = " ".join(text.split())
+            return cleaned or None
+        except Exception:
+            return None
 
     async def _handle_cookie_consent(self, page: Any) -> None:
         try:
