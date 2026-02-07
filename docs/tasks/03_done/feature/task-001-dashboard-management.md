@@ -1,6 +1,6 @@
 # Task 001: Dashboard Detail View & CRUD Management
 
-**Status**: Active
+**Status**: Done
 **Type**: Feature
 **Created**: 2026-02-07
 
@@ -40,14 +40,12 @@
 
 ## 📋 Implementation Tasks
 
-- [x] **Backend**: Add `get_job`, `delete_job`, `archive_job` to `JobService`.
-- [x] **Backend**: Add `delete_non_target_jobs` to `JobService` (for cleanup).
-- [ ] **Frontend**: Refactor `app.py` to use `st.session_state` for navigation (List <-> Detail).
-- [ ] **Frontend**: Implement Detail View with Description and Actions.
-- [ ] **Frontend**: Add Admin/Cleanup section in Sidebar.
+- [x] **Frontend**: Refactor `app.py` to use `st.session_state` for navigation (List <-> Detail).
+- [x] **Frontend**: Implement Detail View with Description and Actions.
+- [x] **Frontend**: Add Admin/Cleanup section in Sidebar.
 
 ## 🧪 Verification Plan
 
-- [ ] Verify clicking a job shows the full description.
-- [ ] Verify "Delete" removes the job from the DB.
-- [ ] Verify "Track" moves the job to the Applications tab.
+- [x] Verify clicking a job shows the full description.
+- [x] Verify "Delete" removes the job from the DB.
+- [x] Verify "Track" moves the job to the Applications tab.
