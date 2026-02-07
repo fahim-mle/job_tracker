@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import TYPE_CHECKING, Callable, Iterable, cast
 
 import sys
 from pathlib import Path
@@ -20,10 +20,8 @@ from src.services.job_service import JobService
 def render_jobs_page() -> None:
     st.header("Jobs")
 
-    if "current_view" not in st.session_state:
-        st.session_state.current_view = "list"
-    if "selected_job_id" not in st.session_state:
-        st.session_state.selected_job_id = None
+    if "page_number" not in st.session_state:
+        st.session_state.page_number = 0
 
     with SessionLocal() as db_session:
         job_service = JobService(db_session)
@@ -43,97 +41,6 @@ def render_jobs_page() -> None:
                 st.sidebar.success(
                     f"Deleted {deleted_count} job{'s' if deleted_count != 1 else ''}."
                 )
-
-        if st.session_state.current_view == "detail":
-            selected_job_id = st.session_state.selected_job_id
-            if not selected_job_id:
-                st.error("No job selected.")
-                st.session_state.current_view = "list"
-                st.session_state.selected_job_id = None
-                st.rerun()
-
-            job = job_service.get_job_by_id(selected_job_id)
-            if job is None:
-                st.error("Selected job not found.")
-                st.session_state.current_view = "list"
-                st.session_state.selected_job_id = None
-                st.rerun()
-
-            back_clicked = st.button("Back to List")
-            if back_clicked:
-                st.session_state.current_view = "list"
-                st.session_state.selected_job_id = None
-                st.rerun()
-
-            job_title = getattr(job, "title", "") or "Untitled role"
-            job_company = getattr(job, "company", "") or "Unknown company"
-            job_location = getattr(job, "location", "") or "N/A"
-            posted_date = getattr(job, "posted_date", None)
-
-            st.subheader(job_title)
-            st.write(job_company)
-            st.write(job_location)
-            st.write(
-                f"Posted Date: {posted_date.isoformat() if posted_date else 'N/A'}"
-            )
-
-            description = getattr(job, "description", None) or ""
-            if description:
-                st.markdown(description)
-            else:
-                st.markdown("_No description available._")
-
-            action_cols = st.columns(3)
-            with action_cols[0]:
-                track_clicked = st.button("Track", type="primary", key="track_job")
-                if track_clicked:
-                    try:
-                        application = application_service.create_application(job.id)
-                        db_session.commit()
-                    except Exception as exc:
-                        db_session.rollback()
-                        st.error(f"Failed to track application: {exc}")
-                    else:
-                        if application in db_session.new:
-                            st.success("Application tracked.")
-                        else:
-                            st.info("Application already tracked.")
-
-            with action_cols[1]:
-                archive_clicked = st.button("Archive", key="archive_job")
-                if archive_clicked:
-                    try:
-                        archived = job_service.archive_job(job.id)
-                        if not archived:
-                            raise ValueError("Job could not be archived.")
-                        db_session.commit()
-                    except Exception as exc:
-                        db_session.rollback()
-                        st.error(f"Failed to archive job: {exc}")
-                    else:
-                        st.success("Job archived.")
-                        st.session_state.current_view = "list"
-                        st.session_state.selected_job_id = None
-                        st.rerun()
-
-            with action_cols[2]:
-                delete_clicked = st.button("Delete", key="delete_job")
-                if delete_clicked:
-                    try:
-                        deleted = job_service.delete_job(job.id)
-                        if not deleted:
-                            raise ValueError("Job could not be deleted.")
-                        db_session.commit()
-                    except Exception as exc:
-                        db_session.rollback()
-                        st.error(f"Failed to delete job: {exc}")
-                    else:
-                        st.success("Job deleted.")
-                        st.session_state.current_view = "list"
-                        st.session_state.selected_job_id = None
-                        st.rerun()
-
-            return
 
         jobs: list[Job] = job_service.get_active_jobs()
 
@@ -192,81 +99,160 @@ def render_jobs_page() -> None:
 
     st.caption(f"Showing {len(filtered_jobs)} of {len(jobs)} active jobs")
 
-    rows = []
-    for job in filtered_jobs:
-        posted_date = getattr(job, "posted_date", None)
-        skills = getattr(job, "skills", None) or []
-        skill_names = sorted(
-            {skill.skill_name for skill in skills if getattr(skill, "skill_name", None)}
-        )
-        rows.append(
-            {
-                "Track": False,
-                "Company": getattr(job, "company", "") or "",
-                "Title": getattr(job, "title", "") or "",
-                "Location": getattr(job, "location", "") or "N/A",
-                "Skills": ", ".join(skill_names) if skill_names else "N/A",
-                "Posted Date": posted_date.isoformat() if posted_date else "N/A",
-                "Link": getattr(job, "url", "") or "",
-            }
-        )
+    page_size = 20
+    total_pages = max(1, (len(filtered_jobs) + page_size - 1) // page_size)
+    if st.session_state.page_number >= total_pages:
+        st.session_state.page_number = total_pages - 1
 
-    edited_rows = st.data_editor(
-        rows,
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "Track": st.column_config.CheckboxColumn("Track"),
-            "Link": st.column_config.LinkColumn("Link"),
-        },
-        disabled=["Company", "Title", "Location", "Skills", "Posted Date", "Link"],
-    )
+    def get_dialog_decorator() -> Callable[..., Callable[..., None]]:
+        dialog_attr = getattr(st, "dialog", None)
+        if dialog_attr is not None:
+            return dialog_attr
+        dialog_attr = getattr(st, "experimental_dialog", None)
+        if dialog_attr is None:
+            raise RuntimeError("Streamlit dialog is not available.")
+        return cast(Callable[..., Callable[..., None]], dialog_attr)
 
-    selected_count = len([row for row in edited_rows if row.get("Track")])
-    st.caption(f"Selected {selected_count} jobs to track")
+    dialog_decorator = get_dialog_decorator()
 
-    selected_jobs = [
-        job for job, row in zip(filtered_jobs, edited_rows) if row.get("Track")
-    ]
-    track_clicked = st.button(
-        "Track Selected",
-        type="primary",
-        disabled=selected_count == 0,
-    )
+    if TYPE_CHECKING:
 
-    if track_clicked and selected_jobs:
-        try:
-            created_count = 0
-            for job in selected_jobs:
-                application = application_service.create_application(job.id)
-                if application in db_session.new:
-                    created_count += 1
-            db_session.commit()
-        except Exception as exc:
-            db_session.rollback()
-            st.error(f"Failed to track applications: {exc}")
-        else:
-            if created_count:
-                st.success(
-                    f"Tracked {created_count} application"
-                    f"{'s' if created_count != 1 else ''}."
+        def show_job_details(job_id: int) -> None:
+            return
+    else:
+
+        @dialog_decorator("Job Details")
+        def show_job_details(job_id: int) -> None:
+            with SessionLocal() as dialog_session:
+                detail_service = JobService(dialog_session)
+                app_service = ApplicationService(dialog_session)
+                job = detail_service.get_job_by_id(job_id)
+                if job is None:
+                    st.error("Job not found.")
+                    return
+
+                job_title = getattr(job, "title", "") or "Untitled role"
+                job_company = getattr(job, "company", "") or "Unknown company"
+                job_location = getattr(job, "location", "") or "N/A"
+                posted_date = getattr(job, "posted_date", None)
+
+                st.markdown(f"### {job_title}")
+                st.write(job_company)
+                st.write(job_location)
+                st.write(
+                    f"Posted Date: {posted_date.isoformat() if posted_date else 'N/A'}"
                 )
-            else:
-                st.info("Selected jobs are already tracked.")
 
-    st.subheader("View Details")
-    for job in filtered_jobs:
-        cols = st.columns([4, 1])
-        with cols[0]:
-            title = getattr(job, "title", "") or "Untitled role"
-            company = getattr(job, "company", "") or "Unknown company"
-            location = getattr(job, "location", "") or "N/A"
-            st.write(f"{title} — {company} ({location})")
-        with cols[1]:
-            if st.button("View Details", key=f"view_details_{job.id}"):
-                st.session_state.selected_job_id = job.id
-                st.session_state.current_view = "detail"
-                st.rerun()
+                description = getattr(job, "description", None) or ""
+                if description:
+                    st.markdown(description)
+                else:
+                    st.markdown("_No description available._")
+
+                action_cols = st.columns(2)
+                with action_cols[0]:
+                    track_clicked = st.button(
+                        "Track",
+                        type="primary",
+                        key=f"dialog_track_{job.id}",
+                    )
+                    if track_clicked:
+                        try:
+                            application = app_service.create_application(job.id)
+                            dialog_session.commit()
+                        except Exception as exc:
+                            dialog_session.rollback()
+                            st.error(f"Failed to track application: {exc}")
+                        else:
+                            if application in dialog_session.new:
+                                st.success("Application tracked.")
+                            else:
+                                st.info("Application already tracked.")
+
+                with action_cols[1]:
+                    archive_clicked = st.button(
+                        "Archive",
+                        key=f"dialog_archive_{job.id}",
+                    )
+                    if archive_clicked:
+                        try:
+                            archived = detail_service.archive_job(job.id)
+                            if not archived:
+                                raise ValueError("Job could not be archived.")
+                            dialog_session.commit()
+                        except Exception as exc:
+                            dialog_session.rollback()
+                            st.error(f"Failed to archive job: {exc}")
+                        else:
+                            st.success("Job archived.")
+                            st.rerun()
+
+    page_cols = st.columns([1, 2, 1])
+    with page_cols[0]:
+        if st.button("Previous", disabled=st.session_state.page_number == 0):
+            st.session_state.page_number -= 1
+            st.rerun()
+    with page_cols[1]:
+        st.caption(f"Page {st.session_state.page_number + 1} of {total_pages}")
+    with page_cols[2]:
+        if st.button(
+            "Next",
+            disabled=st.session_state.page_number >= total_pages - 1,
+        ):
+            st.session_state.page_number += 1
+            st.rerun()
+
+    start_index = st.session_state.page_number * page_size
+    end_index = start_index + page_size
+    page_jobs = filtered_jobs[start_index:end_index]
+
+    for job in page_jobs:
+        job_title = getattr(job, "title", "") or "Untitled role"
+        job_company = getattr(job, "company", "") or "Unknown company"
+        job_location = getattr(job, "location", "") or "N/A"
+        posted_date = getattr(job, "posted_date", None)
+
+        with st.container(border=True):
+            col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
+            with col1:
+                st.markdown(f"### {job_title}")
+                st.write(job_company)
+            with col2:
+                st.write(job_location)
+                st.write(
+                    f"Posted Date: {posted_date.isoformat() if posted_date else 'N/A'}"
+                )
+            with col3:
+                if st.button("ℹ️ Info", key=f"info_{job.id}"):
+                    show_job_details(job.id)
+            with col4:
+                track_clicked = st.button("➕ Track", key=f"track_{job.id}")
+                if track_clicked:
+                    try:
+                        application = application_service.create_application(job.id)
+                        db_session.commit()
+                    except Exception as exc:
+                        db_session.rollback()
+                        st.error(f"Failed to track application: {exc}")
+                    else:
+                        if application in db_session.new:
+                            st.success("Application tracked.")
+                        else:
+                            st.info("Application already tracked.")
+
+                delete_clicked = st.button("🗑️ Delete", key=f"delete_{job.id}")
+                if delete_clicked:
+                    try:
+                        deleted = job_service.delete_job(job.id)
+                        if not deleted:
+                            raise ValueError("Job could not be deleted.")
+                        db_session.commit()
+                    except Exception as exc:
+                        db_session.rollback()
+                        st.error(f"Failed to delete job: {exc}")
+                    else:
+                        st.success("Job deleted.")
+                        st.rerun()
 
 
 def render_applications_page() -> None:
