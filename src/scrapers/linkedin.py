@@ -83,7 +83,49 @@ class LinkedInScraper(BaseScraper):
         try:
             await page.goto(url, wait_until="domcontentloaded")
             await self._handle_cookie_consent(page)
-            await page.wait_for_selector(".show-more-less-html__markup", timeout=10000)
+            await page.wait_for_timeout(1500)
+
+            if not await page.is_visible(".show-more-less-html__markup"):
+                try:
+                    modal_selectors = [
+                        ".contextual-sign-in-modal",
+                        "#public-sign-in-modal",
+                    ]
+                    for selector in modal_selectors:
+                        try:
+                            if await page.locator(selector).count() > 0:
+                                try:
+                                    dismiss = page.locator(
+                                        "button.contextual-sign-in-modal__modal-dismiss"
+                                    )
+                                    if await dismiss.count() > 0:
+                                        await dismiss.first.click(timeout=2000)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+                try:
+                    await page.keyboard.press("Escape")
+                except Exception:
+                    pass
+
+                try:
+                    await page.mouse.click(0, 0)
+                except Exception:
+                    pass
+
+            try:
+                await page.wait_for_selector(
+                    ".show-more-less-html__markup", timeout=8000
+                )
+            except Exception:
+                await self._dismiss_sign_in_modal(page)
+                await page.wait_for_selector(
+                    ".show-more-less-html__markup", timeout=8000
+                )
             node = await page.query_selector(".show-more-less-html__markup")
             if not node:
                 return None
@@ -94,6 +136,37 @@ class LinkedInScraper(BaseScraper):
             return cleaned or None
         except Exception:
             return None
+
+    async def _dismiss_sign_in_modal(self, page: Any) -> None:
+        modal_selectors = [
+            "div#public-sign-in-modal",
+            ".contextual-sign-in-modal",
+            "div[aria-label='Sign in']",
+        ]
+        dismiss_selectors = [
+            "button.contextual-sign-in-modal__modal-dismiss",
+            "button[aria-label='Dismiss']",
+            "button[aria-label='Close']",
+            "button:has-text('Dismiss')",
+            "button:has-text('Close')",
+        ]
+
+        try:
+            for selector in modal_selectors:
+                locator = page.locator(selector)
+                if await locator.count() == 0:
+                    continue
+                for dismiss_selector in dismiss_selectors:
+                    dismiss = page.locator(dismiss_selector)
+                    if await dismiss.count() > 0:
+                        await dismiss.first.click(timeout=2000)
+                        await page.wait_for_timeout(500)
+                        return
+                await page.keyboard.press("Escape")
+                await page.wait_for_timeout(500)
+                return
+        except Exception:
+            return
 
     async def _handle_cookie_consent(self, page: Any) -> None:
         try:
